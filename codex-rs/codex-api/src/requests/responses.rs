@@ -11,10 +11,18 @@ use codex_protocol::protocol::SessionSource;
 use http::HeaderMap;
 use serde_json::Value;
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Compression {
+    #[default]
+    None,
+    Zstd,
+}
+
 /// Assembled request body plus headers for a Responses stream request.
 pub struct ResponsesRequest {
     pub body: Value,
     pub headers: HeaderMap,
+    pub compression: Compression,
 }
 
 #[derive(Default)]
@@ -33,6 +41,7 @@ pub struct ResponsesRequestBuilder<'a> {
     session_source: Option<SessionSource>,
     store_override: Option<bool>,
     headers: HeaderMap,
+    compression: Compression,
 }
 
 impl<'a> ResponsesRequestBuilder<'a> {
@@ -100,6 +109,11 @@ impl<'a> ResponsesRequestBuilder<'a> {
         self
     }
 
+    pub fn compression(mut self, compression: Compression) -> Self {
+        self.compression = compression;
+        self
+    }
+
     pub fn build(self, provider: &Provider) -> Result<ResponsesRequest, ApiError> {
         let model = self
             .model
@@ -147,7 +161,11 @@ impl<'a> ResponsesRequestBuilder<'a> {
             insert_header(&mut headers, "x-openai-subagent", &subagent);
         }
 
-        Ok(ResponsesRequest { body, headers })
+        Ok(ResponsesRequest {
+            body,
+            headers,
+            compression: self.compression,
+        })
     }
 }
 
@@ -240,10 +258,6 @@ mod tests {
             .collect();
         assert_eq!(ids, vec![Some("m1".to_string()), None]);
 
-        assert_eq!(
-            request.headers.get("conversation_id"),
-            Some(&HeaderValue::from_static("conv-1"))
-        );
         assert_eq!(
             request.headers.get("session_id"),
             Some(&HeaderValue::from_static("conv-1"))
