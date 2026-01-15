@@ -320,6 +320,7 @@ impl ModelClientSession {
             conversation_id: Some(conversation_id),
             session_source: Some(self.state.session_source.clone()),
             extra_headers: beta_feature_headers(&self.state.config),
+            service_tier: self.state.config.model_service_tier.clone(),
             compression,
         }
     }
@@ -462,6 +463,7 @@ impl ModelClientSession {
                     &api_prompt,
                     Some(conversation_id.clone()),
                     Some(session_source.clone()),
+                    self.state.config.model_service_tier.clone(),
                 )
                 .await;
 
